@@ -1,11 +1,14 @@
 import React from 'react';
-import CommandeForm from './components/CommandeForm';
+import StockForm from './components/StockForm';
+import StockList from './components/StockList';
 
 function App() {
   return (
     <div className="App">
-      <h1>Créer une commande</h1>
-      <CommandeForm />
+      <h1>Gestion des Stocks - SNK Plastic</h1>
+      <StockForm />
+      <hr />
+      <StockList />
     </div>
   );
 }
