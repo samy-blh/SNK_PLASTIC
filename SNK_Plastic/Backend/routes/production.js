@@ -11,6 +11,7 @@ const {
   getGraphData,
   getFilteredLogs,
   getFilteredOFs,
+  getActiveOFByMachine,
 } = require('../controllers/productionController');
 
 // Ordres de fabrication
@@ -25,5 +26,6 @@ router.post('/logs', addLog);
 router.get('/logs', getLogs);
 router.get('/logs/graph', getFilteredLogs);
 router.get('/ofs', getFilteredOFs);
+router.get('/active-of/:machineId', getActiveOFByMachine);
 
 module.exports = router;

@@ -212,6 +212,25 @@ const getFilteredOFs = async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };
+
+// OF actif pour une machine donnée
+const getActiveOFByMachine = async (req, res) => {
+  const { machineId } = req.params;
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM ordres_fabrication
+       WHERE machine_id = $1 AND etat != 'termine'
+       ORDER BY id DESC
+       LIMIT 1`,
+      [machineId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Aucun OF actif' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Erreur getActiveOFByMachine:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
 // Données agrégées pour graphes
 const getGraphData = async (req, res) => {
   const { filter } = req.query;
@@ -250,4 +269,5 @@ module.exports = {
   getFilteredLogs,
   getFilteredOFs,
   getGraphData,
+  getActiveOFByMachine,
 };
