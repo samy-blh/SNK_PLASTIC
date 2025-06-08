@@ -21,18 +21,18 @@ function DashboardKpis({ filters }) {
   if (!kpis) return <p>Loading...</p>;
 
   return (
-    <div className="kpis">
-      <div className="kpi-card">
-        <h3>Produits finis</h3>
-        <p>{kpis.total_produits_finis}</p>
+    <div className="kpi-container">
+      <div className="kpi-box">
+        <h4>Produits finis</h4>
+        <div className="kpi-value">{kpis.total_produits_finis}</div>
       </div>
-      <div className="kpi-card">
-        <h3>Rebuts</h3>
-        <p>{kpis.total_rebuts}</p>
+      <div className="kpi-box">
+        <h4>Rebuts</h4>
+        <div className="kpi-value">{kpis.total_rebuts}</div>
       </div>
-      <div className="kpi-card">
-        <h3>Restant à produire</h3>
-        <p>{kpis.restant_a_produire}</p>
+      <div className="kpi-box">
+        <h4>Restant à produire</h4>
+        <div className="kpi-value">{kpis.restant_a_produire}</div>
       </div>
     </div>
   );

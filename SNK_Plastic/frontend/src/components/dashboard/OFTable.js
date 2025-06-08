@@ -21,25 +21,23 @@ function OFTable({ filters }) {
   if (!ofs) return <p>Loading...</p>;
 
   return (
-    <div>
-      <h2>Ordres de fabrication actifs</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Client</th>
-            <th>Machine</th>
+    <table className="of-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Client</th>
+          <th>Machine</th>
             <th>Quantité commandée</th>
             <th>Quantité produite</th>
             <th>Rebuts</th>
             <th>Restant</th>
             <th>Temps écoulé</th>
-            <th>Statut</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ofs.map((of) => (
-            <tr key={of.id}>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        {ofs.map((of) => (
+          <tr key={of.id}>
               <td>{of.id}</td>
               <td>{of.client}</td>
               <td>{of.machine}</td>
@@ -48,12 +46,11 @@ function OFTable({ filters }) {
               <td style={{ color: of.rebuts > 0 ? 'red' : 'inherit' }}>{of.rebuts}</td>
               <td>{of.restant}</td>
               <td>{of.temps_ecoule}</td>
-              <td>{of.etat}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+            <td>{of.etat}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
