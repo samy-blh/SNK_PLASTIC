@@ -5,6 +5,7 @@ function SideMenu() {
   return (
     <nav className="side-menu">
       <ul>
+        <li><NavLink to="/dashboard">Dashboard</NavLink></li>
         <li><NavLink to="/stocks">Stocks</NavLink></li>
         <li><NavLink to="/factures">Factures</NavLink></li>
         <li><NavLink to="/production">Suivi de production</NavLink></li>
