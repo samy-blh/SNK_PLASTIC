@@ -1,20 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
-function OFTable() {
+function OFTable({ filters }) {
   const [ofs, setOfs] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/dashboard/ofs');
+        const res = await axios.get('http://localhost:5000/api/dashboard/ofs', {
+          params: filters,
+        });
         setOfs(res.data);
       } catch (err) {
         console.error('Erreur chargement OF actifs:', err);
       }
     };
     fetchData();
-  }, []);
+  }, [filters]);
 
   if (!ofs) return <p>Loading...</p>;
 
