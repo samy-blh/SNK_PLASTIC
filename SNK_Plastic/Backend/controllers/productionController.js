@@ -1,141 +1,202 @@
 const pool = require('../db');
 
-// Get list of active manufacturing orders
-const getOFs = async (req, res) => {
+const calculateTimes = async (ofId) => {
   try {
-    const query = `SELECT of.id AS numero_of, c.nom AS client, m.nom AS machine,
-                          of.temps_ecoule, of.temps_restant, of.etat
-                   FROM ordres_fabrication of
-                   JOIN clients c ON of.client_id = c.id
-                   JOIN machines m ON of.machine_id = m.id
-                   WHERE of.etat != 'termine'`;
-    const { rows } = await pool.query(query);
+    const logRes = await pool.query(
+      `SELECT MIN(date_heure) AS debut, MAX(date_heure) AS fin,
+              SUM(quantite_produite) AS qte
+       FROM production_logs WHERE of_id = $1`,
+      [ofId]
+    );
+    const log = logRes.rows[0];
+    const ofRes = await pool.query('SELECT quantite_commande FROM ordres_fabrication WHERE id = $1', [ofId]);
+    if (ofRes.rowCount === 0) return;
+    const qteCmd = ofRes.rows[0].quantite_commande;
+    let tempsEcoule = 0;
+    let tempsRestant = 0;
+    if (log.debut && log.fin) {
+      tempsEcoule = (new Date(log.fin) - new Date(log.debut)) / 3600000;
+      const progress = log.qte / qteCmd;
+      if (progress > 0) {
+        const total = tempsEcoule / progress;
+        tempsRestant = Math.max(total - tempsEcoule, 0);
+      }
+    }
+    await pool.query(
+      'UPDATE ordres_fabrication SET temps_ecoule = $1, temps_restant = $2 WHERE id = $3',
+      [tempsEcoule, tempsRestant, ofId]
+    );
+  } catch (e) {
+    console.error('Erreur calcul temps:', e);
+  }
+};
+
+// Liste de tous les OF
+const listOFs = async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT of.id, c.nom AS client, m.nom AS machine,
+              of.temps_ecoule, of.temps_restant, of.etat
+       FROM ordres_fabrication of
+       JOIN clients c ON of.client_id = c.id
+       JOIN machines m ON of.machine_id = m.id`
+    );
     res.json(rows);
-  } catch (error) {
-    console.error('Erreur lors de la récupération des OFs:', error);
+  } catch (err) {
+    console.error('Erreur listOFs:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };
 
-// Get production logs with optional filters
-const getLogs = async (req, res) => {
-  const { machine_id, client_id, date } = req.query;
-  const conditions = [];
+// Liste des OF en cours
+const listActiveOFs = async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT of.id, c.nom AS client, m.nom AS machine,
+              of.temps_ecoule, of.temps_restant, of.etat
+       FROM ordres_fabrication of
+       JOIN clients c ON of.client_id = c.id
+       JOIN machines m ON of.machine_id = m.id
+       WHERE of.etat != 'termine'`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Erreur listActiveOFs:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// Création d'un OF
+const createOF = async (req, res) => {
+  const { client_id, machine_id, produit_id, matiere_id, quantite_commande } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO ordres_fabrication (client_id, machine_id, produit_id, matiere_id, quantite_commande, etat, temps_ecoule, temps_restant)
+       VALUES ($1,$2,$3,$4,$5,'en_attente',0,0) RETURNING *`,
+      [client_id, machine_id, produit_id, matiere_id, quantite_commande]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Erreur createOF:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// Mise à jour d'un OF
+const updateOF = async (req, res) => {
+  const { id } = req.params;
+  const fields = ['etat', 'client_id', 'machine_id', 'produit_id', 'matiere_id', 'quantite_commande'];
+  const updates = [];
   const values = [];
-  let idx = 1;
-  let query = `SELECT pl.*, c.nom AS client, m.nom AS machine
-               FROM production_logs pl
-               JOIN ordres_fabrication of ON pl.of_id = of.id
-               JOIN clients c ON of.client_id = c.id
-               JOIN machines m ON pl.machine_id = m.id`;
+  fields.forEach((f) => {
+    if (req.body[f] !== undefined) {
+      updates.push(`${f} = $${updates.length + 1}`);
+      values.push(req.body[f]);
+    }
+  });
+  if (updates.length === 0) return res.status(400).json({ error: 'Aucune donnée' });
+  values.push(id);
+  try {
+    const result = await pool.query(`UPDATE ordres_fabrication SET ${updates.join(', ')} WHERE id = $${values.length} RETURNING *`, values);
+    await calculateTimes(id);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Erreur updateOF:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
 
-  if (machine_id) {
-    conditions.push(`pl.machine_id = $${idx++}`);
-    values.push(machine_id);
+// Détails d'un OF
+const getOF = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await calculateTimes(id);
+    const { rows } = await pool.query(
+      `SELECT of.*, c.nom AS client, m.nom AS machine
+       FROM ordres_fabrication of
+       JOIN clients c ON of.client_id = c.id
+       JOIN machines m ON of.machine_id = m.id
+       WHERE of.id = $1`,
+      [id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'OF non trouvé' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Erreur getOF:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-  if (client_id) {
-    conditions.push(`of.client_id = $${idx++}`);
-    values.push(client_id);
-  }
-  if (date) {
-    conditions.push(`CAST(pl.date_heure AS DATE) = $${idx++}`);
-    values.push(date);
-  }
-  if (conditions.length > 0) {
-    query += ' WHERE ' + conditions.join(' AND ');
-  }
-  query += ' ORDER BY pl.date_heure DESC';
+};
 
+// Ajout d'un log de production
+const addLog = async (req, res) => {
+  const { of_id, machine_id, quantite_produite, quantite_rebuts, date_heure } = req.body;
+  try {
+    await pool.query(
+      `INSERT INTO production_logs(of_id, machine_id, quantite_produite, quantite_rebuts, date_heure)
+       VALUES($1,$2,$3,$4,$5)`,
+      [of_id, machine_id, quantite_produite, quantite_rebuts, date_heure || new Date()]
+    );
+    await calculateTimes(of_id);
+    res.status(201).json({ message: 'Log ajouté' });
+  } catch (err) {
+    console.error('Erreur addLog:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// Récupération des logs
+const getLogs = async (req, res) => {
+  const { of_id } = req.query;
+  let query = 'SELECT * FROM production_logs';
+  const values = [];
+  if (of_id) {
+    query += ' WHERE of_id = $1';
+    values.push(of_id);
+  }
+  query += ' ORDER BY date_heure DESC';
   try {
     const { rows } = await pool.query(query, values);
     res.json(rows);
-  } catch (error) {
-    console.error('Erreur lors de la récupération des logs:', error);
+  } catch (err) {
+    console.error('Erreur getLogs:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };
 
-// Get aggregated stats for graphs
-const getStats = async (req, res) => {
+// Données agrégées pour graphes
+const getGraphData = async (req, res) => {
+  const { filter } = req.query;
+  let query;
+  if (filter === 'machine') {
+    query = `SELECT m.nom AS label, SUM(pl.quantite_produite) AS quantite_produite,
+                    SUM(pl.quantite_rebuts) AS quantite_rebuts
+             FROM production_logs pl
+             JOIN machines m ON pl.machine_id = m.id
+             GROUP BY m.nom ORDER BY m.nom`;
+  } else {
+    query = `SELECT c.nom AS label, SUM(pl.quantite_produite) AS quantite_produite,
+                    SUM(pl.quantite_rebuts) AS quantite_rebuts
+             FROM production_logs pl
+             JOIN ordres_fabrication of ON pl.of_id = of.id
+             JOIN clients c ON of.client_id = c.id
+             GROUP BY c.nom ORDER BY c.nom`;
+  }
   try {
-    const query = `SELECT CAST(pl.date_heure AS DATE) AS jour,
-                          SUM(pl.quantite_produite) AS quantite_produite,
-                          SUM(pl.quantite_rebuts) AS quantite_rebuts
-                   FROM production_logs pl
-                   GROUP BY jour
-                   ORDER BY jour`;
     const { rows } = await pool.query(query);
     res.json(rows);
-  } catch (error) {
-    console.error('Erreur lors de la récupération des stats:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-};
-
-// Mark a manufacturing order as started
-const startOF = async (req, res) => {
-  const { of_id } = req.body;
-  try {
-    await pool.query(
-      'UPDATE ordres_fabrication SET temps_ecoule = 0, etat = $1 WHERE id = $2',
-      ['En cours', of_id]
-    );
-    res.json({ message: 'OF démarré' });
-  } catch (error) {
-    console.error('Erreur lors du démarrage de l\'OF:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-};
-
-// Update manufacturing progress
-const updateOF = async (req, res) => {
-  const {
-    of_id,
-    machine_id,
-    temps_ecoule,
-    temps_restant,
-    quantite_produite,
-    quantite_rebuts,
-  } = req.body;
-
-  try {
-    await pool.query(
-      'UPDATE ordres_fabrication SET temps_ecoule = $1, temps_restant = $2 WHERE id = $3',
-      [temps_ecoule, temps_restant, of_id]
-    );
-
-    await pool.query(
-      'INSERT INTO production_logs(of_id, machine_id, quantite_produite, quantite_rebuts) VALUES($1,$2,$3,$4)',
-      [of_id, machine_id, quantite_produite, quantite_rebuts]
-    );
-
-    res.json({ message: 'OF mis à jour' });
-  } catch (error) {
-    console.error('Erreur lors de la mise à jour de l\'OF:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-};
-
-// Add rejects entry
-const addRebuts = async (req, res) => {
-  const { of_id, machine_id, quantite_rebuts } = req.body;
-  try {
-    await pool.query(
-      'INSERT INTO production_logs(of_id, machine_id, quantite_produite, quantite_rebuts) VALUES ($1, $2, $3, $4)',
-      [of_id, machine_id, 0, quantite_rebuts]
-    );
-    res.status(201).json({ message: 'Rebuts ajoutés' });
-  } catch (error) {
-    console.error('Erreur lors de l\'ajout des rebuts:', error);
+  } catch (err) {
+    console.error('Erreur getGraphData:', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };
 
 module.exports = {
-  getOFs,
-  getLogs,
-  getStats,
-  startOF,
+  listOFs,
+  listActiveOFs,
+  createOF,
   updateOF,
-  addRebuts,
+  getOF,
+  addLog,
+  getLogs,
+  getGraphData,
 };

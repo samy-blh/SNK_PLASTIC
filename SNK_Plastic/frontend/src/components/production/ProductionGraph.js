@@ -13,26 +13,26 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-function ProductionGraph() {
+function ProductionGraph({ mode }) {
   const [data, setData] = useState({ labels: [], rebuts: [], produite: [] });
 
   const fetchStats = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/production/stats');
-      const labels = res.data.map(row => row.jour);
-      const produite = res.data.map(row => row.quantite_produite);
-      const rebuts = res.data.map(row => row.quantite_rebuts);
+      const res = await axios.get('http://localhost:5000/api/production/logs/graph', {
+        params: { filter: mode || 'client' },
+      });
+      const labels = res.data.map((r) => r.label);
+      const produite = res.data.map((r) => r.quantite_produite);
+      const rebuts = res.data.map((r) => r.quantite_rebuts);
       setData({ labels, produite, rebuts });
     } catch (err) {
-      console.error('Erreur lors du chargement des stats:', err);
+      console.error('Erreur chargement graph:', err);
     }
   };
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 10000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [mode]);
 
   const chartData = {
     labels: data.labels,
@@ -52,7 +52,7 @@ function ProductionGraph() {
 
   return (
     <div>
-      <h2>Production quotidienne</h2>
+      <h2>Statistiques par {mode || 'client'}</h2>
       <Bar data={chartData} />
     </div>
   );
