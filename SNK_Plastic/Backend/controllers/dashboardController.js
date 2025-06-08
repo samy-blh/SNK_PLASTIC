@@ -1,14 +1,25 @@
 const pool = require('../db');
 
-// Récupère les indicateurs clés pour le tableau de bord
+// Récupère les indicateurs clés pour le tableau de bord avec filtres
 const getKpis = async (req, res) => {
+  const { client_id, machine_id, date_from, date_to } = req.query;
+  const params = [
+    client_id || null,
+    machine_id || null,
+    date_from || '1970-01-01',
+    date_to || '2100-01-01',
+  ];
   try {
     const totalsRes = await pool.query(
       `SELECT COALESCE(SUM(pl.quantite_produite),0) AS produits,
               COALESCE(SUM(pl.quantite_rebuts),0) AS rebuts
        FROM production_logs pl
        JOIN ordres_fabrication of ON pl.of_id = of.id
-       WHERE of.etat != 'termine'`
+       WHERE of.etat != 'termine'
+         AND ($1::int IS NULL OR of.client_id = $1)
+         AND ($2::int IS NULL OR of.machine_id = $2)
+         AND pl.date_heure BETWEEN $3::date AND $4::date`,
+      params
     );
     const totals = totalsRes.rows[0];
 
@@ -18,9 +29,13 @@ const getKpis = async (req, res) => {
        LEFT JOIN (
          SELECT of_id, SUM(quantite_produite) AS qte
          FROM production_logs
+         WHERE ($2::int IS NULL OR machine_id = $2)
+           AND date_heure BETWEEN $3::date AND $4::date
          GROUP BY of_id
        ) prod ON prod.of_id = of.id
-       WHERE of.etat != 'termine'`
+       WHERE of.etat != 'termine'
+         AND ($1::int IS NULL OR of.client_id = $1)`,
+      params
     );
     const restant = restantRes.rows[0].restant;
 
@@ -35,8 +50,15 @@ const getKpis = async (req, res) => {
   }
 };
 
-// Liste les ordres de fabrication non terminés avec statistiques
+// Liste les ordres de fabrication non terminés avec statistiques et filtres
 const getActiveOFs = async (req, res) => {
+  const { client_id, machine_id, date_from, date_to } = req.query;
+  const params = [
+    client_id || null,
+    machine_id || null,
+    date_from || '1970-01-01',
+    date_to || '2100-01-01',
+  ];
   try {
     const { rows } = await pool.query(
       `SELECT of.id, c.nom AS client, m.nom AS machine,
@@ -53,10 +75,15 @@ const getActiveOFs = async (req, res) => {
          SELECT of_id, SUM(quantite_produite) AS qte,
                 SUM(quantite_rebuts) AS rebuts
          FROM production_logs
+         WHERE ($2::int IS NULL OR machine_id = $2)
+           AND date_heure BETWEEN $3::date AND $4::date
          GROUP BY of_id
        ) prod ON prod.of_id = of.id
        WHERE of.etat != 'termine'
-       ORDER BY of.id`
+         AND ($1::int IS NULL OR of.client_id = $1)
+         AND ($2::int IS NULL OR of.machine_id = $2)
+       ORDER BY of.id`,
+      params
     );
     res.json(rows);
   } catch (err) {
