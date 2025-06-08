@@ -12,11 +12,13 @@ const commandesRoutes = require('./routes/commandes');
 const clientsRoutes = require('./routes/clients');
 const machinesRoutes = require('./routes/machines');
 const stocksRoutes = require('./routes/stocks');
+const productionRoutes = require('./routes/production');
 
 app.use('/api/commandes', commandesRoutes);
 app.use('/api/clients', clientsRoutes);
 app.use('/api/machines', machinesRoutes);
 app.use('/api/stocks', stocksRoutes);
+app.use('/api/production', productionRoutes);
 
 app.get('/', (req, res) => {
   res.send('API SNK Plastic opérationnelle ✔');
