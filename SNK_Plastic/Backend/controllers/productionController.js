@@ -163,6 +163,55 @@ const getLogs = async (req, res) => {
   }
 };
 
+// Logs filtrés pour graphes
+const getFilteredLogs = async (req, res) => {
+  const { client_id, machine_id, date_from, date_to } = req.query;
+  const params = [client_id || null, machine_id || null, date_from || '1970-01-01', date_to || '2100-01-01'];
+  try {
+    const { rows } = await pool.query(
+      `SELECT DATE(pl.date_heure) AS date,
+              SUM(pl.quantite_produite) AS total_produite,
+              SUM(pl.quantite_rebuts) AS total_rebuts
+       FROM production_logs pl
+       JOIN ordres_fabrication of ON of.id = pl.of_id
+       WHERE ($1::int IS NULL OR of.client_id = $1)
+         AND ($2::int IS NULL OR pl.machine_id = $2)
+         AND pl.date_heure BETWEEN $3::date AND $4::date
+       GROUP BY DATE(pl.date_heure)
+       ORDER BY DATE(pl.date_heure)`,
+      params
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Erreur getFilteredLogs:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// OF filtrés selon les logs
+const getFilteredOFs = async (req, res) => {
+  const { client_id, machine_id, date_from, date_to } = req.query;
+  const params = [client_id || null, machine_id || null, date_from || '1970-01-01', date_to || '2100-01-01'];
+  try {
+    const { rows } = await pool.query(
+      `SELECT DISTINCT of.id, c.nom AS client, m.nom AS machine,
+              of.temps_ecoule, of.temps_restant, of.etat
+       FROM production_logs pl
+       JOIN ordres_fabrication of ON pl.of_id = of.id
+       JOIN clients c ON of.client_id = c.id
+       JOIN machines m ON of.machine_id = m.id
+       WHERE ($1::int IS NULL OR of.client_id = $1)
+         AND ($2::int IS NULL OR of.machine_id = $2)
+         AND pl.date_heure BETWEEN $3::date AND $4::date
+       ORDER BY of.id`,
+      params
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Erreur getFilteredOFs:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
 // Données agrégées pour graphes
 const getGraphData = async (req, res) => {
   const { filter } = req.query;
@@ -198,5 +247,7 @@ module.exports = {
   getOF,
   addLog,
   getLogs,
+  getFilteredLogs,
+  getFilteredOFs,
   getGraphData,
 };

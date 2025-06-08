@@ -13,17 +13,17 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-function ProductionGraph({ mode }) {
+function ProductionGraph({ filters }) {
   const [data, setData] = useState({ labels: [], rebuts: [], produite: [] });
 
   const fetchStats = async () => {
     try {
       const res = await axios.get('http://localhost:5000/api/production/logs/graph', {
-        params: { filter: mode || 'client' },
+        params: filters,
       });
-      const labels = res.data.map((r) => r.label);
-      const produite = res.data.map((r) => r.quantite_produite);
-      const rebuts = res.data.map((r) => r.quantite_rebuts);
+      const labels = res.data.map((r) => r.date);
+      const produite = res.data.map((r) => r.total_produite);
+      const rebuts = res.data.map((r) => r.total_rebuts);
       setData({ labels, produite, rebuts });
     } catch (err) {
       console.error('Erreur chargement graph:', err);
@@ -32,7 +32,7 @@ function ProductionGraph({ mode }) {
 
   useEffect(() => {
     fetchStats();
-  }, [mode]);
+  }, [filters]);
 
   const chartData = {
     labels: data.labels,
@@ -52,7 +52,7 @@ function ProductionGraph({ mode }) {
 
   return (
     <div>
-      <h2>Statistiques par {mode || 'client'}</h2>
+      <h2>Production</h2>
       <Bar data={chartData} />
     </div>
   );
