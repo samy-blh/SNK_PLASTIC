@@ -9,6 +9,8 @@ const {
   addLog,
   getLogs,
   getGraphData,
+  getFilteredLogs,
+  getFilteredOFs,
 } = require('../controllers/productionController');
 
 // Ordres de fabrication
@@ -21,6 +23,7 @@ router.get('/of/:id', getOF);
 // Logs de production
 router.post('/logs', addLog);
 router.get('/logs', getLogs);
-router.get('/logs/graph', getGraphData);
+router.get('/logs/graph', getFilteredLogs);
+router.get('/ofs', getFilteredOFs);
 
 module.exports = router;

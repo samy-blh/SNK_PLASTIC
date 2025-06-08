@@ -7,10 +7,9 @@ function OFList({ filters }) {
 
   const fetchOfs = async () => {
     try {
-      const params = {};
-      if (filters.client) params.client = filters.client;
-      if (filters.machine) params.machine = filters.machine;
-      const res = await axios.get('http://localhost:5000/api/production/of/en-cours', { params });
+      const res = await axios.get('http://localhost:5000/api/production/ofs', {
+        params: filters,
+      });
       setOfs(res.data);
     } catch (err) {
       console.error('Erreur chargement OFs:', err);

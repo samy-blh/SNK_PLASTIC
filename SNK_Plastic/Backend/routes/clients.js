@@ -2,6 +2,17 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
+// Liste des clients
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, nom FROM clients ORDER BY nom');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Erreur get clients:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // Route POST /api/clients
 router.post('/', async (req, res) => {
   const { nom } = req.body;
@@ -26,3 +37,4 @@ router.post('/', async (req, res) => {
 });
 
 module.exports = router;
+
