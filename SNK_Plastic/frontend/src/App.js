@@ -7,6 +7,7 @@ import SuiviProductionPage from './components/production/SuiviProductionPage';
 import FactureForm from './components/factures/FactureForm';
 import FactureList from './components/factures/FactureList';
 import FactureGraph from './components/factures/FactureGraph';
+import DashboardPage from './components/dashboard/DashboardPage';
 
 function StocksPage() {
   return (
@@ -36,10 +37,11 @@ function App() {
         <SideMenu />
         <div className="content">
           <Routes>
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/stocks" element={<StocksPage />} />
             <Route path="/factures" element={<FacturesPage />} />
             <Route path="/production" element={<SuiviProductionPage />} />
-            <Route path="*" element={<StocksPage />} />
+            <Route path="*" element={<DashboardPage />} />
           </Routes>
         </div>
       </div>

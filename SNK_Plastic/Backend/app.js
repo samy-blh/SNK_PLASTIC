@@ -14,6 +14,7 @@ const machinesRoutes = require('./routes/machines');
 const stocksRoutes = require('./routes/stocks');
 const productionRoutes = require('./routes/production');
 const facturesRoutes = require('./routes/factures');
+const dashboardRoutes = require('./routes/dashboard');
 
 app.use('/api/commandes', commandesRoutes);
 app.use('/api/clients', clientsRoutes);
@@ -21,6 +22,7 @@ app.use('/api/machines', machinesRoutes);
 app.use('/api/stocks', stocksRoutes);
 app.use('/api/production', productionRoutes);
 app.use('/api/factures', facturesRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/', (req, res) => {
   res.send('API SNK Plastic opérationnelle ✔');
