@@ -1,65 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import OFCard from './OFCard';
 
-function OFList() {
+function OFList({ filters }) {
   const [ofs, setOfs] = useState([]);
-  const [clientFilter, setClientFilter] = useState('');
-  const [machineFilter, setMachineFilter] = useState('');
-  const [loaded, setLoaded] = useState(false);
 
   const fetchOfs = async () => {
     try {
       const params = {};
-      if (clientFilter) params.client_id = clientFilter;
-      if (machineFilter) params.machine_id = machineFilter;
-      const res = await axios.get('http://localhost:5000/api/production/ofs', { params });
+      if (filters.client) params.client = filters.client;
+      if (filters.machine) params.machine = filters.machine;
+      const res = await axios.get('http://localhost:5000/api/production/of/en-cours', { params });
       setOfs(res.data);
-      setLoaded(true);
     } catch (err) {
-      console.error('Erreur lors du chargement des OFs:', err);
+      console.error('Erreur chargement OFs:', err);
     }
   };
 
   useEffect(() => {
     fetchOfs();
-    const interval = setInterval(fetchOfs, 10000);
-    return () => clearInterval(interval);
-  }, [clientFilter, machineFilter]);
+  }, [filters]);
 
   return (
     <div>
-      <h2>Ordres de fabrication en cours</h2>
-      {loaded && <p>TEST OK</p>}
-      <div>
-        <label>Filtrer par client:</label>
-        <input value={clientFilter} onChange={e => setClientFilter(e.target.value)} />
-        <label>Filtrer par machine:</label>
-        <input value={machineFilter} onChange={e => setMachineFilter(e.target.value)} />
+      <h2>OF en cours</h2>
+      <div className="of-list">
+        {ofs.map((of) => (
+          <OFCard key={of.id} of={of} onFinish={fetchOfs} />
+        ))}
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>N° OF</th>
-            <th>Client</th>
-            <th>Machine</th>
-            <th>Temps écoulé</th>
-            <th>Temps restant</th>
-            <th>État</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ofs.map(of => (
-            <tr key={of.numero_of}>
-              <td>{of.numero_of}</td>
-              <td>{of.client}</td>
-              <td>{of.machine}</td>
-              <td>{of.temps_ecoule}</td>
-              <td>{of.temps_restant}</td>
-              <td>{of.etat}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }

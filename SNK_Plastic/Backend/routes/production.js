@@ -1,19 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const {
-  getOFs,
-  getLogs,
-  getStats,
-  startOF,
+  listOFs,
+  listActiveOFs,
+  createOF,
   updateOF,
-  addRebuts,
+  getOF,
+  addLog,
+  getLogs,
+  getGraphData,
 } = require('../controllers/productionController');
 
-router.get('/ofs', getOFs);
+// Ordres de fabrication
+router.get('/of', listOFs);
+router.get('/of/en-cours', listActiveOFs);
+router.post('/of', createOF);
+router.patch('/of/:id', updateOF);
+router.get('/of/:id', getOF);
+
+// Logs de production
+router.post('/logs', addLog);
 router.get('/logs', getLogs);
-router.get('/stats', getStats);
-router.post('/start', startOF);
-router.put('/update', updateOF);
-router.post('/rebuts', addRebuts);
+router.get('/logs/graph', getGraphData);
 
 module.exports = router;
