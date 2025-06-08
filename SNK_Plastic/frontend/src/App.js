@@ -1,6 +1,7 @@
 import React from 'react';
 import StockForm from './components/StockForm';
 import StockList from './components/StockList';
+import SuiviProductionPage from './components/production/SuiviProductionPage';
 
 function App() {
   return (
@@ -9,6 +10,8 @@ function App() {
       <StockForm />
       <hr />
       <StockList />
+      <hr />
+      <SuiviProductionPage />
     </div>
   );
 }
