@@ -1,0 +1,12 @@
+{
+  "client_id": 1,
+  "machine_id": 1,
+  "produit_id": 1,
+  "cycle_sec": 22,
+  "moule_utilise": "Moule 1",
+  "nombre_heures": 3,
+  "poids_piece": 0.15,
+  "nb_operateurs": 2,
+  "matiere_id": 1,
+  "remarques": "Commande testée via Postman"
+}
